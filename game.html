@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <link rel="stylesheet" href="LoveLetter.css">
+    <meta charset="utf-8">
+    <title>Love Letter Game</title>
+  </head>
+  <body>
+    <h1>You are in a game of Love Letter</h1>
+    <h3 id="turnteller">It is your turn, your cards:</h3>
+    <button type="button" name="currCard" id="currCard" class="imgButton"><img id="currCardImg" class="selectImg" src="Guard.jpg"></button>
+    <button type="button" name="drawnCard" id="drawnCard" class="imgButton"><img id="drawnCardImg" class="selectImg" src="Handmaid.jpg"></button>
+    <br>
+    <button type="button" name="seeAllCards" id="seeAllCards">Click to see all cards</button>
+    <br>
+    <img src="Guard.jpg" class="guide" id="firstGuide">
+    <img src="Priest.jpg" class="guide">
+    <img src="Baron.jpg" class="guide">
+    <img src="Handmaid.jpg" class="guide">
+    <img src="Prince.jpg" class="guide">
+    <img src="King.jpg" class="guide">
+    <img src="Countess.jpg" class="guide">
+    <img src="Princess.jpg" class="guide">
+    <h2>Current Standings:</h2>
+    <h2>Steven: 0</h2>
+    <h2>Kevin: 0</h2>
+    <h2>Jonathan: 0</h2>
+    <script src="game.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+<script>
+  var socket = io();
+</script>
+  </body>
+</html>
