@@ -19,7 +19,7 @@ io.on('connection', socket => {
 
   socket.broadcast.emit("message", "A user has joined the lobby"); // All except user
 
-  // io.emit(); - > All cients
+  // io.emit(); - > All users
 
   socket.on("disconnect", () => {
     io.emit("message", "A user has left the lobby")
