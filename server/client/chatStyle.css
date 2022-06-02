@@ -62,3 +62,30 @@ h1, h2 {
 .no-break {
     white-space: nowrap;
 }
+
+#message-box {
+    font-size: 20px;
+    font-weight: bold;
+    color: red;
+    margin-bottom: 5px;
+}
+
+#msg {
+    font-size: 17px;
+    color: red;
+    margin-bottom: 5px;
+}
+
+#send-button {
+    font-family: verdana;
+    font-size: 16px;
+    background-color: white;
+    border: 1px solid red;
+    color: red;
+    padding: 7px 20px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    transition-duration: 0.4s;
+    margin-right: 5px;
+}

@@ -8,40 +8,12 @@ const app = express();
 const server = http.createServer(app);
 const io = socketio(server);
 
+const users = [];
+
+
 // Set static folder
 app.use(express.static(path.join(__dirname, 'client')));
 
-function formatMessage(username, text) {
-  return {
-      username,
-      text
-  }
-}
-
-const users = [];
-
-function userJoin(id, name, room) {
-  // TODO MAKE HOST WHEN HOST LEAVES
-  const host = users.length == 0;
-  const user = {id, name, room, host};
-  users.push(user);
-  return user;
-}
-
-function getCurrUser(id) {
-  return users.find(user => user.id === id);
-}
-
-function userLeave(id) {
-  const index = users.findIndex(user => user.id === id);
-  if(index !== -1) {
-      return users.splice(index, 1)[0];
-  }
-}
-
-function getRoomUsers(room) {
-  return users.filter(user => user.room == room);
-}
 
 
 // Run when client connects
@@ -81,10 +53,44 @@ io.on('connection', socket => {
   socket.on("chatMessage", (msg) => {
     const user = getCurrUser(socket.id);
     io.to(user.room).emit("message", formatMessage(user.name, msg));
-  
   });
+
+
 });
+
 
 const PORT = process.env.PORT || 3000;
 
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+function formatMessage(username, text) {
+  return {
+      username,
+      text
+  }
+}
+
+function userJoin(id, name, room) {
+  // TODO MAKE HOST WHEN HOST LEAVES
+  let host = users.length == 0;
+  if(users.length > 0 && !users[0].host)
+    host = true;
+  const user = {id, name, room, host};
+  users.push(user);
+  return user;
+}
+
+function getCurrUser(id) {
+  return users.find(user => user.id === id);
+}
+
+function userLeave(id) {
+  const index = users.findIndex(user => user.id === id);
+  if(index !== -1) {
+      return users.splice(index, 1)[0];
+  }
+}
+
+function getRoomUsers(room) {
+  return users.filter(user => user.room == room);
+}

@@ -4,6 +4,8 @@ const form = document.getElementById("form");
 const chatMessage = document.querySelector(".chat-message");
 const roomName = document.getElementById("room-name");
 const userList = document.getElementById("users");
+const startGameForm = document.getElementById("startGameForm");
+const startGameBtn = document.getElementById("startGameBtn");
 
 const {name, room} = Qs.parse(location.search, {
     ignoreQueryPrefix: true
@@ -25,7 +27,6 @@ socket.on("connection", (name) => {
 
 // On typing a message
 socket.on("message", message => {
-    console.log(message);
     outputMessage(message);
 
     //Scrolls to the bottom
@@ -64,5 +65,11 @@ function outputUsers(users) {
 }
 
 function outputHost(users, currUser) {
-    host.innerHTML = users.find(user => user.host).name + " is the host. (Host, do not refresh the page)";
+    const hostName = users.find(user => user.host).name
+    host.innerHTML = hostName + " is the host.";
+    if(name == hostName)
+    {
+        startGameForm.innerHTML = `<button type="submit" id="startGameBtn">Start Game</button>`;
+        host.innerHTML = "You are the host.";
+    }
 }
