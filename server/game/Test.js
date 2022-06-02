@@ -17,17 +17,17 @@ class Deck {
         else {
             for(let i = 0; i < 5; i++)
                 this.deckOfCards.push(new Guard());
-            this.deckOfCards.push(new Priest());
-            this.deckOfCards.push(new Priest());
-            this.deckOfCards.push(new Baron());
-            this.deckOfCards.push(new Baron());
-            this.deckOfCards.push(new Handmaid());
-            this.deckOfCards.push(new Handmaid());
-            this.deckOfCards.push(new Prince());
-            this.deckOfCards.push(new Prince());
-            this.deckOfCards.push(new King());
-            this.deckOfCards.push(new Countess());
-            this.deckOfCards.push(new Princess());
+                this.deckOfCards.push(new Priest());
+                this.deckOfCards.push(new Priest());
+                this.deckOfCards.push(new Baron());
+                this.deckOfCards.push(new Baron());
+                this.deckOfCards.push(new Handmaid());
+                this.deckOfCards.push(new Handmaid());
+                this.deckOfCards.push(new Prince());
+                this.deckOfCards.push(new Prince());
+                this.deckOfCards.push(new King());
+                this.deckOfCards.push(new Countess());
+                this.deckOfCards.push(new Princess());
         }
     }
 
