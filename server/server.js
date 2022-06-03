@@ -10,6 +10,8 @@ const io = socketio(server);
 
 const users = [];
 
+const gameUsers = [];
+
 
 // Set static folder
 app.use(express.static(path.join(__dirname, 'client')));
@@ -55,6 +57,21 @@ io.on('connection', socket => {
     io.to(user.room).emit("message", formatMessage(user.name, msg));
   });
 
+  socket.on("gameStart", (room) => {
+    for(var i = 0; i < users.length; i++)
+    {
+      if(users[i].room == room)
+      {
+        gameUsers.push(users[i]);
+      }
+    }
+    io.to(room).emit("startGame");
+  })
+
+  socket.on("drawnCard", ({name, room}) => {
+    console.log(gameUsers);
+    io.to(room).emit("playDrawnCard", name);
+  });
 
 });
 

@@ -33,6 +33,10 @@ socket.on("message", message => {
     chatMessage.scrollTop = chatMessage.scrollHeight;
 });
 
+socket.on("startGame", () => {
+    window.location.href = `game.html?name=${name}&room=${room}`;
+});
+
 form.addEventListener("submit", (e) => {
     e.preventDefault();
 
@@ -65,11 +69,22 @@ function outputUsers(users) {
 }
 
 function outputHost(users, currUser) {
-    const hostName = users.find(user => user.host).name
-    host.innerHTML = hostName + " is the host.";
+    const hostName = users.find(user => user.host).name;
     if(name == hostName)
     {
-        startGameForm.innerHTML = `<button type="submit" id="startGameBtn">Start Game</button>`;
         host.innerHTML = "You are the host.";
+        if(startGameForm.innerHTML === "")
+        {
+            startGameForm.innerHTML = `<button id="startGameBtn">Start Game</button>`;
+        }
     }
+    else
+    {
+        startGameForm.innerHTML = "";
+        host.innerHTML = hostName + " is the host.";
+    }
+}
+
+startGameBtn.onclick = function() {
+    socket.emit("gameStart", room);
 }

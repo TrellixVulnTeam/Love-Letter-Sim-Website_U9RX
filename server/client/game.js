@@ -1,3 +1,4 @@
+const socket = io();
 
 const imgs = ["Guard.jpg", "Priest.jpg", "Baron.jpg", "Handmaid.jpg", "Prince.jpg", "King.jpg", "Countess.jpg", "Princess.jpg"];
 const names = ["Steven", "Kevin", "Jonathan"];
@@ -9,8 +10,16 @@ const drawnCard = document.getElementById("drawnCard");
 const nameDisplay = document.getElementById("nameDisplay");
 
 
+const {name, room} = Qs.parse(location.search, {
+  ignoreQueryPrefix: true
+});
+
+socket.on("startGame", () => {
+  setName(name);
+});
+
 function setName(name) {
-  nameDisplay.innerHTML = "You are: " + socket.id;
+  nameDisplay.innerHTML = "You are: " + name;
 }
 
 document.getElementById("currCard").onclick = function()
@@ -34,8 +43,12 @@ function cycleCards(id)
 
 document.getElementById("drawnCard").onclick = function()
 {
-  changeTurnTeller();
+  socket.emit("drawnCard", {name, room});
 }
+
+socket.on("playDrawnCard", (name) => {
+  console.log(name + " played their drawn card!");
+});
 
 function changeTurnTeller()
 {
