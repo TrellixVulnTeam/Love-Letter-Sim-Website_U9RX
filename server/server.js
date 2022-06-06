@@ -20,6 +20,7 @@ app.use(express.static(path.join(__dirname, 'client')));
 
 // Run when client connects
 io.on('connection', socket => {
+  // Lobby Code
 
   socket.on("joinRoom", ({name, room}) => {
     const user = userJoin(socket.id, name, room);
@@ -28,6 +29,7 @@ io.on('connection', socket => {
     socket.emit("message", formatMessage(admin, "Welcome to Love Letter!")); // Only User
     socket.broadcast.to(user.room).emit("message", formatMessage(admin, `${user.name} has joined the lobby`)); // All except user
 
+
     io.to(user.room).emit("roomUsers", {
       room: user.room,
       users: getRoomUsers(user.room),
@@ -35,11 +37,11 @@ io.on('connection', socket => {
     });
 
 
+    // When a user leaves the lobby
     socket.on("disconnect", () => {
       const user = userLeave(socket.id);
       if(user) {
         io.to(user.room).emit("message", formatMessage(admin, `${user.name} has left the lobby`));
-        
         io.to(user.room).emit("roomUsers", {
           room: user.room,
           users: getRoomUsers(user.room),
@@ -52,6 +54,7 @@ io.on('connection', socket => {
   // io.emit(); - > All users
 
 
+  // Game Code
   socket.on("chatMessage", (msg) => {
     const user = getCurrUser(socket.id);
     io.to(user.room).emit("message", formatMessage(user.name, msg));
@@ -60,6 +63,7 @@ io.on('connection', socket => {
   socket.on("gameStart", (room) => {
     for(var i = 0; i < users.length; i++)
     {
+      // Need to change because right now it just pushes the user into the thingy with no connection to the client
       if(users[i].room == room)
       {
         gameUsers.push(users[i]);
@@ -69,7 +73,7 @@ io.on('connection', socket => {
   })
 
   socket.on("drawnCard", ({name, room}) => {
-    console.log(gameUsers);
+    console.log(name + " played " + room);
     io.to(room).emit("playDrawnCard", name);
   });
 
@@ -88,9 +92,10 @@ function formatMessage(username, text) {
 }
 
 function userJoin(id, name, room) {
-  // TODO MAKE HOST WHEN HOST LEAVES
-  let host = users.length == 0;
-  if(users.length > 0 && !users[0].host)
+  // Temp sol
+  const roomUsers = users.filter(user => user.room === room);
+  let host = roomUsers.length == 0;
+  if(roomUsers.length > 0 && !roomUsers[0].host)
     host = true;
   const user = {id, name, room, host};
   users.push(user);

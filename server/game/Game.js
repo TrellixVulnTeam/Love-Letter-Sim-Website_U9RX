@@ -158,12 +158,25 @@ class Player {
     playDrawnCard() {
         console.log(this.name + " plays " + this.drawnCard.name);
         this.currGame.discard(this.drawnCard);
-        this.drawnCard.setPlayer(null);
+        this.drawnCard.player = null;
         this.drawnCard = null;
     }
 
     loseCard() {
-
+        if(this.currCard == null)
+        {
+            this.drawnCard.setPlayer(null);
+            this.currGame = weakDiscard(drawnCard);
+            this.drawnCard = null;
+        }
+        else
+        {
+            if(this.currCard.name == "Princess")
+            {
+                killPlayer();
+            }
+            currCard.player = null;
+        }
     }
 
     drawCard() {

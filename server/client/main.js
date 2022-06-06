@@ -17,7 +17,7 @@ socket.emit('joinRoom', {name, room});
 socket.on("roomUsers", ({room, users, currUser}) => {
     outputRoomName(room);
     outputUsers(users);
-    outputHost(users, currUser);
+    outputHost(users);
 });
 
 socket.on("connection", (name) => {
@@ -68,7 +68,7 @@ function outputUsers(users) {
     userList.innerHTML = userList.innerHTML.slice(0, -2);
 }
 
-function outputHost(users, currUser) {
+function outputHost(users) {
     const hostName = users.find(user => user.host).name;
     if(name == hostName)
     {

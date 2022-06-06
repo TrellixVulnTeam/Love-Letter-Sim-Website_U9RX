@@ -3,8 +3,6 @@ const socket = io();
 const imgs = ["Guard.jpg", "Priest.jpg", "Baron.jpg", "Handmaid.jpg", "Prince.jpg", "King.jpg", "Countess.jpg", "Princess.jpg"];
 const names = ["Steven", "Kevin", "Jonathan"];
 let playerName = "Steven";
-var i = 1;
-var j = 0;
 const currCard = document.getElementById("currCard");
 const drawnCard = document.getElementById("drawnCard");
 const nameDisplay = document.getElementById("nameDisplay");
@@ -32,6 +30,8 @@ function playCard(id)
   alert(document.getElementById(id).src + " has been played!");
 }
 
+var i = 1;
+var j = 0;
 
 function cycleCards(id)
 {
