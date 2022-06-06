@@ -52,7 +52,7 @@ io.on('connection', socket => {
           currUser: getCurrUser(socket.id)
         }); 
 
-        io.to(gameUser.room).emit("gameUsers", {
+        io.to(user.room).emit("gameUsers", {
           room: gameUser.room,
           users: getGameRoomUsers(gameUser.room),
           currUser: getCurrGameUser(socket.id)
@@ -110,6 +110,7 @@ io.on('connection', socket => {
   socket.on("drawnCard", ({name, room}) => {
     //TODO SERVERSIDE
     io.to(room).emit("playDrawnCard", name);
+    console.log(gameUsers);
   });
 
 });
@@ -138,6 +139,12 @@ function userJoin(id, name, room) {
 }
 
 function userJoinGame(id, name, room) {
+  let indexOfUser = gameUsers.findIndex(user => user.name == name);
+  if(indexOfUser != -1)
+  {
+    gameUsers[indexOfUser].id = id;
+    return gameUsers[indexOfUser];
+  }
   const points = 0;
   const currDeck = decks.find(dec => dec.room == room);
   const currCard = currDeck.deck.drawCard();

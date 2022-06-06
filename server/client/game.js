@@ -25,7 +25,7 @@ socket.on("startGame", () => {
 // When the game starts, update everything clientside
 socket.on("gameUsers", ({room, users, currUser}) => {
   outputUsers(users);
-  updateCards(currUser);
+  updateCards(users.find(user => user.name == name));
 });
 
 
