@@ -86,6 +86,7 @@ class Guard extends Card {
         super("Guard", "Name a number other than 1 and choose another player."
             + "\nIf they have that number in their hand, they are knocked out of the round.", 1, "Guard.jpg");
     }
+    
 };
 
 class Priest extends Card {
