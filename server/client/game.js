@@ -9,8 +9,8 @@ const currCardImg = document.getElementById("currCardImg");
 const drawnCardImg = document.getElementById("drawnCardImg");
 const nameDisplay = document.getElementById("nameDisplay");
 const userList = document.getElementById("userList");
-
-
+const cardsInDeckTeller = document.getElementById("cardsInDeck");
+const chatMessage = document.querySelector(".chat-message");
 
 const {name, room} = Qs.parse(location.search, {
   ignoreQueryPrefix: true
@@ -28,53 +28,36 @@ socket.on("gameUsers", ({room, users, currUser}) => {
   updateCards(users.find(user => user.name == name));
 });
 
+socket.on("updateVisuals", gusers => {
+  updateCards(gusers.find(user => user.name == name));
+});
 
 function setName(name) {
   nameDisplay.innerHTML = "You are: " + name;
 }
 
+// When currCard is clicked
 document.getElementById("currCard").onclick = function() {
-  cycleCards("currCardImg");
+  socket.emit("currCard", {name, room});
 }
 
 function playCard(id) {
   alert(document.getElementById(id).src + " has been played!");
 }
 
-var i = 1;
-var j = 0;
-
-function cycleCards(id) {
-  document.getElementById(id).src = imgs[i];
-  i++;
-  if(i == imgs.length)
-    i = 0;
-}
-
+// When drawnCard is clicked
 document.getElementById("drawnCard").onclick = function() {
   socket.emit("drawnCard", {name, room});
 }
 
 socket.on("playDrawnCard", (name, drawnCardName) => {
   outputMessage(`${name} has played their drawn card: ${drawnCardName}`);
-  changeTurnTeller();
+  socket.emit("playCard", room);
 });
 
-function changeTurnTeller() {
-  j++;
-  if(j == names.length)
-  {
-    j = 0;
-  }
-  if(names[j] == playerName)
-  {
-    document.getElementById("turnteller").innerHTML = "It is your turn, your cards:"
-  }
-  else
-  {
-    document.getElementById("turnteller").innerHTML = "It is " + names[j] + "'s turn, your card:";
-  }
-}
+socket.on("changeCardInDeck", numOfCards => {
+  cardsInDeckTeller.innerText =`Cards Remaining in Deck: ${numOfCards}`;
+});
 
 function toggleGuideVisibility() {
   const cards = document.querySelectorAll(".guide");
@@ -114,7 +97,12 @@ function outputMessage(message) {
 
 function updateCards(player) {
   console.log(player.currCard.name);
-  currCardImg.src = `${player.currCard.name}.jpg`;
+  if(player.currCard)
+    currCardImg.src = `${player.currCard.name}.jpg`;
+  else
+    currCardImg.src = "";
   if(player.drawnCard)
-    drawnCardImg.src = player.drawnCard.name;
+    drawnCardImg.src = `${player.drawnCard.name}.jpg`;
+  else
+    drawnCardImg.src = "";
 }

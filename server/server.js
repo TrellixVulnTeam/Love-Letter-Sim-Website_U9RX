@@ -50,12 +50,6 @@ io.on('connection', socket => {
           room: user.room,
           users: getRoomUsers(user.room),
           currUser: getCurrUser(socket.id)
-        }); 
-
-        io.to(user.room).emit("gameUsers", {
-          room: gameUser.room,
-          users: getGameRoomUsers(gameUser.room),
-          currUser: getCurrGameUser(socket.id)
         });
       }
     });
@@ -80,6 +74,7 @@ io.on('connection', socket => {
       let deck = new Deck(currPlayersInRoom);
       deck.createDeck();
       deck.shuffleDeck();
+      deck.drawCard();
       decks.push({room, deck});
     }
 
@@ -92,6 +87,9 @@ io.on('connection', socket => {
       users: getGameRoomUsers(gameUser.room),
       currUser: getCurrGameUser(socket.id)
     });
+    startGame(room);
+    const numOfCards = decks.find(dec => dec.room == room).deck.deckOfCards.length;
+    socket.emit("changeCardInDeck", numOfCards);
   });
 
   // Upon a host pressing the start button
@@ -102,15 +100,39 @@ io.on('connection', socket => {
       if(users[i].room == room)
         numOfPlayers++;
     }
+
+    // Create a deck if there isn't one
+    if(decks.length == 0 || decks.find(deck => deck.room != room))
+    {
+      let deck = new Deck(currPlayersInRoom);
+      deck.createDeck();
+      deck.shuffleDeck();
+      deck.drawCard();
+      decks.push({room, deck});
+    }
+
     io.to(room).emit("startGame");
     currPlayersInRoom = numOfPlayers;
-    playGame();
+  });
+
+  socket.on("currCard", ({name, room}) => {
+    console.log(gameUsers);
   });
 
   socket.on("drawnCard", ({name, room}) => {
     //TODO SERVERSIDE
-    io.to(room).emit("playDrawnCard", name);
-    console.log(gameUsers);
+    gameUser = findGameUser(name);
+    io.to(room).emit("playDrawnCard", name, gameUser.drawnCard);
+    gameUser.drawnCard = null;
+    gusers = getGameRoomUsers(gameUser.room);
+    io.to(room).emit("updateVisuals", gusers);
+  });
+
+
+  // When a card is played
+  socket.on("playCard", (room) => {
+    const numOfCards = decks.find(dec => dec.room == room).deck.deckOfCards.length;
+    socket.emit("changeCardInDeck", numOfCards);
   });
 
 });
@@ -180,6 +202,11 @@ function getGameRoomUsers(room) {
 
 function getNextPlayer(currPlayerName, room) {
   var i = gameUsers.findIndex(player => player.room == room && player.name == currPlayerName);
+  if(i == -1)
+  {
+    var i = gameUsers.findIndex(player => player.room == room);
+    return gameUsers[i];
+  }
   i++;
   while(gameUsers[i].room != room)
   {
@@ -190,9 +217,18 @@ function getNextPlayer(currPlayerName, room) {
   return gameUsers[i];
 }
 
-//TODO
-function playGame() {
+function findGameUser(name) {
+  return gameUsers.find(user => user.name == name);
+}
 
+//TODO
+function startGame(room) {
+  const currPlayer = getNextPlayer("", room);
+  if(!currPlayer.drawnCard)
+  {
+    const currDeck = decks.find(deck => deck.room == room);
+    currPlayer.drawnCard = currDeck.deck.drawCard();
+  }
 }
 
 // Deck class
