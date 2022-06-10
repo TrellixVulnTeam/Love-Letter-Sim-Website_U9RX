@@ -50,7 +50,7 @@ document.getElementById("drawnCard").onclick = function() {
   socket.emit("drawnCard", {name, room});
 }
 
-socket.on("playDrawnCard", (name, drawnCardName) => {
+socket.once("playDrawnCard", (name, drawnCardName) => {
   outputMessage(`${name} has played their drawn card: ${drawnCardName}`);
   socket.emit("playCard", room);
 });

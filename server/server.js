@@ -122,7 +122,7 @@ io.on('connection', socket => {
   socket.on("drawnCard", ({name, room}) => {
     //TODO SERVERSIDE
     gameUser = findGameUser(name);
-    io.to(room).emit("playDrawnCard", name, gameUser.drawnCard);
+    io.to(room).emit("playDrawnCard", name, gameUser.drawnCard.name);
     gameUser.drawnCard = null;
     gusers = getGameRoomUsers(gameUser.room);
     io.to(room).emit("updateVisuals", gusers);
