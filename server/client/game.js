@@ -11,6 +11,7 @@ const nameDisplay = document.getElementById("nameDisplay");
 const userList = document.getElementById("userList");
 const cardsInDeckTeller = document.getElementById("cardsInDeck");
 const chatMessage = document.querySelector(".chat-message");
+const actionsArea = document.getElementById("action-box");
 
 const {name, room} = Qs.parse(location.search, {
   ignoreQueryPrefix: true
@@ -59,6 +60,10 @@ socket.on("changeCardInDeck", numOfCards => {
   cardsInDeckTeller.innerText =`Cards Remaining in Deck: ${numOfCards}`;
 });
 
+socket.on("setTarget", card => {
+  openTargetInput();
+});
+
 function toggleGuideVisibility() {
   const cards = document.querySelectorAll(".guide");
   if(document.getElementById("firstGuide").style.display != "none")
@@ -105,4 +110,12 @@ function updateCards(player) {
     drawnCardImg.src = `${player.drawnCard.name}.jpg`;
   else
     drawnCardImg.src = "";
+}
+
+function openTargetInput() {
+  console.log("hello!!!");
+  actionsArea.innerHTML = `<label for="msg" id="action-box">Type a Player's name: </label>
+    <input type="text" id="msg">
+    <button id="action-button">Enter</button>`;
+
 }

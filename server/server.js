@@ -123,6 +123,7 @@ io.on('connection', socket => {
     //TODO SERVERSIDE
     gameUser = findGameUser(name);
     io.to(room).emit("playDrawnCard", name, gameUser.drawnCard.name);
+    gameUser.drawnCard.discard;
     gameUser.drawnCard = null;
     gusers = getGameRoomUsers(gameUser.room);
     io.to(room).emit("updateVisuals", gusers);
@@ -301,11 +302,15 @@ class Card {
   }
   
   discard = currGame => {
+      console.log("hi");
 
   }
 
-  targetPlayer = (currGame) => {
-
+  targetPlayer = (currPlayer, card) => {
+    io.to(currPlayer).emit("setTarget", card);
+    socket.on("targetSet", player => {
+      return player;
+    });
   }
 
   getFullDesc = () => {
@@ -319,6 +324,12 @@ class Guard extends Card {
           + "\nIf they have that number in their hand, they are knocked out of the round.", 1, "Guard.jpg");
   }
   
+  discard(currPlayer) {
+    target = targetPlayer(currPlayer, Guard);
+    io.to(currPlayer).emit("guessNumber");
+    console.log("hello");
+  }
+
 };
 
 class Priest extends Card {
