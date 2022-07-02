@@ -16,6 +16,10 @@ const decks = [];
 
 let currPlayersInRoom = 0;
 
+let currPlayerIndex = null;
+let selectedPlayerIndex = null;
+let isCurrCard = null;
+
 // Set static folder
 app.use(express.static(path.join(__dirname, 'client')));
 
@@ -111,6 +115,9 @@ io.on('connection', socket => {
       decks.push({room, deck});
     }
 
+    // Set the first player as the first one in the thingy
+    currPlayerIndex = 0;
+
     io.to(room).emit("startGame");
     currPlayersInRoom = numOfPlayers;
   });
@@ -122,8 +129,11 @@ io.on('connection', socket => {
   socket.on("drawnCard", ({name, room}) => {
     //TODO SERVERSIDE
     gameUser = findGameUser(name);
-    io.to(room).emit("playDrawnCard", name, gameUser.drawnCard.name);
-    gameUser.drawnCard.discard;
+    io.to(room).emit("playDrawnCard", {
+      name, 
+      drawnCardName: gameUser.drawnCard.name
+    });
+    gameUser.drawnCard.discard(findGameUser(name), gameUser.drawnCard);
     gameUser.drawnCard = null;
     gusers = getGameRoomUsers(gameUser.room);
     io.to(room).emit("updateVisuals", gusers);
@@ -134,6 +144,12 @@ io.on('connection', socket => {
   socket.on("playCard", (room) => {
     const numOfCards = decks.find(dec => dec.room == room).deck.deckOfCards.length;
     socket.emit("changeCardInDeck", numOfCards);
+  });
+
+  //TODO Have to figure out how to differentiate cards, could make global var
+  socket.on("targetSet", ({player, isCurrCard}) => {
+    selectedPlayerIndex = gameUsers.findIndex(user => user.name == player);
+    gameUsers[currPlayerIndex].
   });
 
 });
@@ -232,6 +248,17 @@ function startGame(room) {
   }
 }
 
+function changeTurn(room) {
+  currPlayerIndex++;
+  if (currPlayerIndex == getGameUsers(room).length)
+  {
+    currPlayerIndex = 0;
+  }
+
+  selectedPlayerIndex = null;
+  isCurrCard = null;
+}
+
 // Deck class
 class Deck {
   constructor(numOfPlayers) {
@@ -251,17 +278,18 @@ class Deck {
       else {
           for(let i = 0; i < 5; i++)
               this.deckOfCards.push(new Guard());
-              this.deckOfCards.push(new Priest());
-              this.deckOfCards.push(new Priest());
-              this.deckOfCards.push(new Baron());
-              this.deckOfCards.push(new Baron());
-              this.deckOfCards.push(new Handmaid());
-              this.deckOfCards.push(new Handmaid());
-              this.deckOfCards.push(new Prince());
-              this.deckOfCards.push(new Prince());
-              this.deckOfCards.push(new King());
-              this.deckOfCards.push(new Countess());
-              this.deckOfCards.push(new Princess());
+          
+          this.deckOfCards.push(new Priest());
+          this.deckOfCards.push(new Priest());
+          this.deckOfCards.push(new Baron());
+          this.deckOfCards.push(new Baron());
+          this.deckOfCards.push(new Handmaid());
+          this.deckOfCards.push(new Handmaid());
+          this.deckOfCards.push(new Prince());
+          this.deckOfCards.push(new Prince());
+          this.deckOfCards.push(new King());
+          this.deckOfCards.push(new Countess());
+          this.deckOfCards.push(new Princess());
       }
   }
 
@@ -301,19 +329,13 @@ class Card {
       this.player = null;
   }
   
-  discard = currGame => {
-      console.log("hi");
+  discard(currPlayer, currCard) {}
 
+  targetPlayer(currPlayer, card) {
+    io.to(currPlayer.id).emit("setTarget", card);
   }
 
-  targetPlayer = (currPlayer, card) => {
-    io.to(currPlayer).emit("setTarget", card);
-    socket.on("targetSet", player => {
-      return player;
-    });
-  }
-
-  getFullDesc = () => {
+  getFullDesc() {
 
   }
 }
@@ -324,17 +346,22 @@ class Guard extends Card {
           + "\nIf they have that number in their hand, they are knocked out of the round.", 1, "Guard.jpg");
   }
   
-  discard(currPlayer) {
-    target = targetPlayer(currPlayer, Guard);
-    io.to(currPlayer).emit("guessNumber");
-    console.log("hello");
+  discard(currPlayer, currCard) {
+    this.targetPlayer(currPlayer, currCard);
+        io.to(currPlayer.id).emit("guessNumber");
   }
+  
 
 };
 
 class Priest extends Card {
   constructor() {
       super("Priest", "Look at another player's hand.", 2, "Priest.jpg");
+  }
+
+  //TODO
+  discard(currPlayer, currCard) {
+
   }
 }
 
