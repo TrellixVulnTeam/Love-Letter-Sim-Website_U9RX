@@ -19,7 +19,15 @@
     <br>
     <h3 id="cardsInDeck"></h3>
     <button type="button" name="seeAllCards" id="seeAllCards">Click to see all cards</button>
-    <div class="actionsArea">
+    <div id="target-box" style="display: none;">
+      <label for="msg" id="target-text">Type a Player's name: </label>
+      <input type="text" id="target-msg">
+      <button id="target-button">Enter</button>
+    </div>
+    <div id="numGuesser" style="display: none;">
+      <label for="msg" id="numGuessText">Type a number from 2-8: </label>
+      <input type="text" id="numGuessMsg">
+      <button id="numGuessBtn">Enter</button>
     </div>
     <br>
     <img src="Guard.jpg" class="guide" id="firstGuide">

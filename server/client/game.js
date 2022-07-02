@@ -11,7 +11,12 @@ const nameDisplay = document.getElementById("nameDisplay");
 const userList = document.getElementById("userList");
 const cardsInDeckTeller = document.getElementById("cardsInDeck");
 const chatMessage = document.querySelector(".chat-message");
-const actionsArea = document.getElementById("action-box");
+
+const targetArea = document.getElementById("target-box");
+const targetText = document.getElementById("target-msg");
+
+const numGuessArea = document.getElementById("numGuesser");
+const numgGuessText = document.getElementById("numGuessMsg");
 
 const {name, room} = Qs.parse(location.search, {
   ignoreQueryPrefix: true
@@ -61,7 +66,12 @@ socket.on("changeCardInDeck", numOfCards => {
 });
 
 socket.on("setTarget", card => {
-  openTargetInput();
+  openTargetInput(card);
+  console.log("Jesjs");
+});
+
+socket.on("guessNumber", () => {
+  openNumGuesser()
 });
 
 function toggleGuideVisibility() {
@@ -112,10 +122,25 @@ function updateCards(player) {
     drawnCardImg.src = "";
 }
 
-function openTargetInput() {
-  console.log("hello!!!");
-  actionsArea.innerHTML = `<label for="msg" id="action-box">Type a Player's name: </label>
-    <input type="text" id="msg">
-    <button id="action-button">Enter</button>`;
+function openTargetInput(card) {
+  targetArea.style.display = "block";
+  targetText.className = card.name;
+}
 
+document.getElementById("target-button").onclick = function() {
+  targetMSG = document.getElementById("target-msg").innerText;
+  cardName = targetText.className
+  socket.emit("targetSet", {targetMSG, cardName});
+  targetArea.style.display = "none";
+} 
+
+function openNumGuesser() {
+  numGuessArea.style.display = "block";
+}
+
+document.getElementById("numGuessBtn").onclick = function() {
+  socket.emit("numberGuessed", { // idk if i need to get the current player name
+    number: document.getElementById("numGuessMsg").innerText,
+    currPlayerName: playerName
+  })
 }
