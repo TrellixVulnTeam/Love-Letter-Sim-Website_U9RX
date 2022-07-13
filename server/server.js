@@ -10,6 +10,7 @@ const io = socketio(server);
 
 const users = [];
 
+// gameUser = {id, name, room, points, currCard, drawnCard};
 const gameUsers = [];
 
 const decks = [];
@@ -94,6 +95,8 @@ io.on('connection', socket => {
     startGame(room);
     const numOfCards = decks.find(dec => dec.room == room).deck.deckOfCards.length;
     socket.emit("changeCardInDeck", numOfCards);
+    const gusers = getGameRoomUsers(gameUser.room);
+    io.to(room).emit("updateVisuals", gusers);
   });
 
   // Upon a host pressing the start button
@@ -123,19 +126,22 @@ io.on('connection', socket => {
   });
 
   socket.on("currCard", ({name, room}) => {
-    console.log(gameUsers);
+    gameUser = findGameUser(name);
+    io.to(room).emit("playCurrCard", {name, drawnCardName: gameUser.drawnCard.name});
+    gameUser.currCard.discard(findGameUser(name), gameUser.currCard);
+    gameUser.currCard = gameUser.drawnCard;
+    gameUser.drawnCard = null;
+    const gusers = getGameRoomUsers(gameUser.room);
+    io.to(room).emit("updateVisuals", gusers);
   });
 
   socket.on("drawnCard", ({name, room}) => {
     //TODO SERVERSIDE
     gameUser = findGameUser(name);
-    io.to(room).emit("playDrawnCard", {
-      name, 
-      drawnCardName: gameUser.drawnCard.name
-    });
+    io.to(room).emit("playDrawnCard", {name, drawnCardName: gameUser.drawnCard.name});
     gameUser.drawnCard.discard(findGameUser(name), gameUser.drawnCard);
     gameUser.drawnCard = null;
-    gusers = getGameRoomUsers(gameUser.room);
+    const gusers = getGameRoomUsers(gameUser.room);
     io.to(room).emit("updateVisuals", gusers);
   });
 
@@ -147,9 +153,33 @@ io.on('connection', socket => {
   });
 
   //TODO Have to figure out how to differentiate cards, could make global var
-  socket.on("targetSet", ({player, isCurrCard}) => {
-    selectedPlayerIndex = gameUsers.findIndex(user => user.name == player);
-    gameUsers[currPlayerIndex].
+  socket.on("targetSet", ({name, targetMSG, cardName}) => {
+    const selectedPlayerIndex = gameUsers.findIndex(user => user.name == targetMSG);
+    if(cardName == "Guard")
+    {
+      //TODO
+    }
+    else if(cardName == "Priest")
+    {
+      const priestMsg = `(To you) ${gameUsers[selectedPlayerIndex].name} has a ${gameUsers[selectedPlayerIndex].currCard.name}`;
+      io.to(gameUsers.find(user => user.name == name).id).emit("gameMessage", priestMsg);
+      changeTurn(gameUsers[selectedPlayerIndex].room);
+    }
+    else if(cardName == "Baron")
+    {
+      //TODO
+      changeTurn(gameUsers[selectedPlayerIndex].room);
+    }
+    else if(cardName == "Prince")
+    {
+      //TODO
+      changeTurn(gameUsers[selectedPlayerIndex].room);
+    }
+    else if(cardName == "King")
+    {
+      //TODO
+      changeTurn(gameUsers[selectedPlayerIndex].room);
+    }
   });
 
 });
@@ -250,13 +280,26 @@ function startGame(room) {
 
 function changeTurn(room) {
   currPlayerIndex++;
-  if (currPlayerIndex == getGameUsers(room).length)
+  const gameRoomUsers = getGameRoomUsers(room);
+  if (currPlayerIndex == gameRoomUsers.length)
   {
     currPlayerIndex = 0;
   }
-
+  const currDeck = decks.find(deck => deck.room == room);
+  gameRoomUsers[currPlayerIndex].drawnCard = currDeck.deck.drawCard();
+  const gusers = getGameRoomUsers(gameUser.room);
+  io.to(room).emit("updateVisuals", gusers);
   selectedPlayerIndex = null;
   isCurrCard = null;
+  // What happens when theres no cards left
+  if(currDeck.deck.length == 0)
+  {
+    endGame(room);
+  }
+}
+
+function endGame(room) {
+  //TODO
 }
 
 // Deck class
@@ -278,9 +321,7 @@ class Deck {
       else {
           for(let i = 0; i < 5; i++)
               this.deckOfCards.push(new Guard());
-          
-          this.deckOfCards.push(new Priest());
-          this.deckOfCards.push(new Priest());
+
           this.deckOfCards.push(new Baron());
           this.deckOfCards.push(new Baron());
           this.deckOfCards.push(new Handmaid());
@@ -290,6 +331,10 @@ class Deck {
           this.deckOfCards.push(new King());
           this.deckOfCards.push(new Countess());
           this.deckOfCards.push(new Princess());
+          this.deckOfCards.push(new Priest());
+          this.deckOfCards.push(new Priest());
+          this.deckOfCards.push(new Priest());
+          this.deckOfCards.push(new Priest());
       }
   }
 
@@ -307,7 +352,7 @@ class Deck {
   }
 
   shuffleDeck() {
-      this.deckOfCards = this.deckOfCards.sort((a, b) => 0.5 - Math.random());
+      //this.deckOfCards = this.deckOfCards.sort((a, b) => 0.5 - Math.random());
   }
 
   drawCard() {
@@ -359,9 +404,8 @@ class Priest extends Card {
       super("Priest", "Look at another player's hand.", 2, "Priest.jpg");
   }
 
-  //TODO
   discard(currPlayer, currCard) {
-
+    this.targetPlayer(currPlayer, currCard);
   }
 }
 
@@ -370,12 +414,20 @@ class Baron extends Card {
       super("Baron", "You and another player secretly compare hands. "
        + "\nThe player with the lower value is out of the round.", 3, "Baron.jpg");
   }
+
+  discard(currPlayer, currCard) {
+    this.targetPlayer(currPlayer, currCard);
+  }
 }
 
 class Handmaid extends Card {
   constructor() {
       super("Handmaid", "Until your next turn, "
        + "ignore all effects from the other players' cards.", 4, "Handmaid.jpg");
+  }
+
+  discard(currPlayer, currCard) {
+    
   }
 }
 
@@ -384,12 +436,20 @@ class Prince extends Card {
       super("Prince", "Choose any player (including yourself) "
       + "to discard his or her hand and draw a new card.", 5, "Prince.jpg");
   }
+
+  discard(currPlayer, currCard) {
+    this.targetPlayer(currPlayer, currCard);
+  }
 }
 
 
 class King extends Card {
   constructor() {
       super("King", "Trade hands with another player of your choice.", 6, "King.jpg")
+  }
+
+  discard(currPlayer, currCard) {
+    this.targetPlayer(currPlayer, currCard);
   }
 }
 
@@ -398,10 +458,19 @@ class Countess extends Card {
       super("Countess", "If you have this card and the King or Prince in your hand, "
       + "you must discard this card.", 7, "Countess.jpg");
   }
+
+  discard(currPlayer, currCard) {
+    changeTurn(currPlayer.room);
+  }
 }
 
 class Princess extends Card {
   constructor() {
       super("Princess", "If you discard this card, you are out of the round.", 8, "Princess.jpg");
+  }
+
+  discard(currPlayer, currCard) {
+    //TODO
+    changeTurn(currPlayer.room);
   }
 }

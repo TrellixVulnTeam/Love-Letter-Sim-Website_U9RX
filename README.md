@@ -1,4 +1,4 @@
-# Love Letter Emulator (WIP)
+# Love Letter Emulator
 
 A website that uses socket.io in order to emulate a multiplayer game of the card game Love Letter. The website supports the base game of Love Letter, which supports 2-4 players.
 

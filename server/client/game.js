@@ -18,6 +18,8 @@ const targetText = document.getElementById("target-msg");
 const numGuessArea = document.getElementById("numGuesser");
 const numgGuessText = document.getElementById("numGuessMsg");
 
+const standings = document.getElementById("standings");
+
 const {name, room} = Qs.parse(location.search, {
   ignoreQueryPrefix: true
 });
@@ -34,8 +36,10 @@ socket.on("gameUsers", ({room, users, currUser}) => {
   updateCards(users.find(user => user.name == name));
 });
 
+// gusers are the users in the room
 socket.on("updateVisuals", gusers => {
   updateCards(gusers.find(user => user.name == name));
+  setScores(gusers);
 });
 
 function setName(name) {
@@ -56,7 +60,8 @@ document.getElementById("drawnCard").onclick = function() {
   socket.emit("drawnCard", {name, room});
 }
 
-socket.once("playDrawnCard", (name, drawnCardName) => {
+socket.on("playDrawnCard", ({name, drawnCardName}) => {
+  console.log(name + '\n' + drawnCardName);
   outputMessage(`${name} has played their drawn card: ${drawnCardName}`);
   socket.emit("playCard", room);
 });
@@ -72,6 +77,10 @@ socket.on("setTarget", card => {
 
 socket.on("guessNumber", () => {
   openNumGuesser()
+});
+
+socket.on("gameMessage", msg => {
+  outputMessage(msg);
 });
 
 function toggleGuideVisibility() {
@@ -128,9 +137,10 @@ function openTargetInput(card) {
 }
 
 document.getElementById("target-button").onclick = function() {
-  targetMSG = document.getElementById("target-msg").innerText;
-  cardName = targetText.className
-  socket.emit("targetSet", {targetMSG, cardName});
+  const targetMSG = document.getElementById("target-msg").value;
+  console.log(targetMSG);
+  const cardName = targetText.className;
+  socket.emit("targetSet", {name, targetMSG, cardName});
   targetArea.style.display = "none";
 } 
 
@@ -143,4 +153,13 @@ document.getElementById("numGuessBtn").onclick = function() {
     number: document.getElementById("numGuessMsg").innerText,
     currPlayerName: playerName
   })
+}
+
+function setScores(players)
+{
+  standings.innerHTML = "";
+  for(const player of players)
+  {
+    standings.innerHTML += `<h2>${player.name}: ${player.points}`;
+  }
 }
