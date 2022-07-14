@@ -20,6 +20,8 @@ const numgGuessText = document.getElementById("numGuessMsg");
 
 const standings = document.getElementById("standings");
 
+const aliveTeller = document.getElementById("aliveTeller")
+
 const {name, room} = Qs.parse(location.search, {
   ignoreQueryPrefix: true
 });
@@ -38,8 +40,11 @@ socket.on("gameUsers", ({room, users, currUser}) => {
 
 // gusers are the users in the room
 socket.on("updateVisuals", gusers => {
-  updateCards(gusers.find(user => user.name == name));
+  const guser = gusers.find(user => user.name == name);
+  updateCards(guser);
   setScores(gusers);
+  changeAliveness(guser.alive);
+  console.log(guser);
 });
 
 function setName(name) {
@@ -61,8 +66,12 @@ document.getElementById("drawnCard").onclick = function() {
 }
 
 socket.on("playDrawnCard", ({name, drawnCardName}) => {
-  console.log(name + '\n' + drawnCardName);
   outputMessage(`${name} has played their drawn card: ${drawnCardName}`);
+  socket.emit("playCard", room);
+});
+
+socket.on("playCurrCard", ({name, currCardName}) => {
+  outputMessage(`${name} has played their held card: ${currCardName}`);
   socket.emit("playCard", room);
 });
 
@@ -72,7 +81,6 @@ socket.on("changeCardInDeck", numOfCards => {
 
 socket.on("setTarget", card => {
   openTargetInput(card);
-  console.log("Jesjs");
 });
 
 socket.on("guessNumber", () => {
@@ -120,7 +128,6 @@ function outputMessage(message) {
 }
 
 function updateCards(player) {
-  console.log(player.currCard.name);
   if(player.currCard)
     currCardImg.src = `${player.currCard.name}.jpg`;
   else
@@ -138,7 +145,6 @@ function openTargetInput(card) {
 
 document.getElementById("target-button").onclick = function() {
   const targetMSG = document.getElementById("target-msg").value;
-  console.log(targetMSG);
   const cardName = targetText.className;
   socket.emit("targetSet", {name, targetMSG, cardName});
   targetArea.style.display = "none";
@@ -155,11 +161,17 @@ document.getElementById("numGuessBtn").onclick = function() {
   })
 }
 
-function setScores(players)
-{
+function setScores(players) {
   standings.innerHTML = "";
   for(const player of players)
   {
     standings.innerHTML += `<h2>${player.name}: ${player.points}`;
   }
+}
+
+function changeAliveness(isAlive) {
+  if(isAlive)
+    aliveTeller.innerText = "You are alive. You may still play this round.";
+  else
+    aliveTeller.innerText = "You are dead. You many no longer play for this round.";
 }

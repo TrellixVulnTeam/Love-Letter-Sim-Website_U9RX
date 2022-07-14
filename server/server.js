@@ -10,7 +10,7 @@ const io = socketio(server);
 
 const users = [];
 
-// gameUser = {id, name, room, points, currCard, drawnCard};
+// gameUser = {id, name, room, points, currCard, drawnCard, alive};
 const gameUsers = [];
 
 const decks = [];
@@ -127,7 +127,7 @@ io.on('connection', socket => {
 
   socket.on("currCard", ({name, room}) => {
     gameUser = findGameUser(name);
-    io.to(room).emit("playCurrCard", {name, drawnCardName: gameUser.drawnCard.name});
+    io.to(room).emit("playCurrCard", {name, currCardName: gameUser.currCard.name});
     gameUser.currCard.discard(findGameUser(name), gameUser.currCard);
     gameUser.currCard = gameUser.drawnCard;
     gameUser.drawnCard = null;
@@ -150,38 +150,63 @@ io.on('connection', socket => {
   socket.on("playCard", (room) => {
     const numOfCards = decks.find(dec => dec.room == room).deck.deckOfCards.length;
     socket.emit("changeCardInDeck", numOfCards);
+    const gusers = getGameRoomUsers(gameUser.room);
+    io.to(room).emit("updateVisuals", gusers);
   });
 
   //TODO Have to figure out how to differentiate cards, could make global var
   socket.on("targetSet", ({name, targetMSG, cardName}) => {
     const selectedPlayerIndex = gameUsers.findIndex(user => user.name == targetMSG);
+    const selectedPlayer = gameUsers[selectedPlayerIndex];
+    const currPlayer = gameUsers.find(user=> user.name == name);
     if(cardName == "Guard")
     {
       //TODO
     }
     else if(cardName == "Priest")
     {
-      const priestMsg = `(To you) ${gameUsers[selectedPlayerIndex].name} has a ${gameUsers[selectedPlayerIndex].currCard.name}`;
+      const priestMsg = `(To you) ${selectedPlayer.name} has a ${selectedPlayer.currCard.name}`;
       io.to(gameUsers.find(user => user.name == name).id).emit("gameMessage", priestMsg);
-      changeTurn(gameUsers[selectedPlayerIndex].room);
+      changeTurn(selectedPlayer.room);
     }
     else if(cardName == "Baron")
     {
-      //TODO
-      changeTurn(gameUsers[selectedPlayerIndex].room);
+      let currPlayerCardNum = 0;
+      if(currPlayer.currCard)
+        currPlayerCardNum = currPlayer.currCard.num;
+      else
+        currPlayerCardNum = currPlayer.drawnCard.num;
+      io.to(currPlayer.id).emit("gameMessage", `(to you) ${selectedPlayer.name} has a ${selectedPlayer.currCard.name}`);
+      if(currPlayerCardNum < selectedPlayer.currCard.num)
+        killPlayer(currPlayer)
+      else if (currPlayerCardNum > selectedPlayer.currCard.num)
+        killPlayer(selectedPlayer)
+      changeTurn(selectedPlayer.room);
     }
     else if(cardName == "Prince")
     {
-      //TODO
-      changeTurn(gameUsers[selectedPlayerIndex].room);
+      if(selectedPlayer.currCard)
+      {
+        io.to(currPlayer.room).emit("gameMessage", `${selectedPlayer.name} discarded a ${selectedPlayer.currCard.name}`);
+        if (selectedPlayer.currCard.name == "Princess")
+          killPlayer(selectedPlayer);
+        selectedPlayer.currCard = null;
+      }
+      else
+      {
+        io.to(currPlayer.room).emit("gameMessage", `${selectedPlayer.name} discarded a ${selectedPlayer.drawnCard}`);
+        if (selectedPlayer.drawnCard.name == "Princess")
+          killPlayer(selectedPlayer);
+        selectedPlayer.drawnCard = null;
+      }
+      changeTurn(selectedPlayer.room);
     }
     else if(cardName == "King")
     {
       //TODO
-      changeTurn(gameUsers[selectedPlayerIndex].room);
+      changeTurn(selectedPlayer.room);
     }
   });
-
 });
 
 
@@ -218,7 +243,8 @@ function userJoinGame(id, name, room) {
   const currDeck = decks.find(dec => dec.room == room);
   const currCard = currDeck.deck.drawCard();
   const drawnCard = null;
-  const user = {id, name, room, points, currCard, drawnCard};
+  const alive = true;
+  const user = {id, name, room, points, currCard, drawnCard, alive};
   gameUsers.push(user);
   return user;
 }
@@ -279,27 +305,63 @@ function startGame(room) {
 }
 
 function changeTurn(room) {
+  const originalIndex = currPlayerIndex;
   currPlayerIndex++;
   const gameRoomUsers = getGameRoomUsers(room);
   if (currPlayerIndex == gameRoomUsers.length)
-  {
     currPlayerIndex = 0;
-  }
+  if(!(gameRoomUsers[currPlayerIndex].alive))
+    currPlayerIndex++;
   const currDeck = decks.find(deck => deck.room == room);
   gameRoomUsers[currPlayerIndex].drawnCard = currDeck.deck.drawCard();
-  const gusers = getGameRoomUsers(gameUser.room);
-  io.to(room).emit("updateVisuals", gusers);
   selectedPlayerIndex = null;
   isCurrCard = null;
+  const gusers = getGameRoomUsers(gameUser.room);
+  io.to(room).emit("updateVisuals", gusers);
   // What happens when theres no cards left
-  if(currDeck.deck.length == 0)
-  {
-    endGame(room);
+  if(currDeck.deck.length == 0) {
+    let maxPlayer = gameRoomUsers[0];
+    let maxNum = gameRoomUsers[0].currCard.num;
+    for(let i = 0; i < gameRoomUsers.length; i++) {
+      if(maxNum < gameRoomUsers[i].currCard.num)
+      {
+        maxNum = gameRoomUsers[i].currCard.num;
+        maxPlayer = gameRoomUsers[i];
+      }
+    }
+    endGame(room, maxPlayer);
+  }
+  // If there's only one player left alive
+  if(currPlayerIndex == originalIndex) {
+    endGame(room, gameRoomUsers[currPlayerIndex]);
   }
 }
 
-function endGame(room) {
-  //TODO
+function endGame(room, winningPlayer) {
+  winningPlayer.score++;
+  resetGame(room)
+}
+
+function resetGame(room) {
+  const gameRoomUsers = getGameRoomUsers(room);
+  for(let i = 0; i < gameRoomUsers.length; i++) {
+    gameRoomUsers[i].alive = true;
+    gameRoomUsers[i].currCard = null;
+    gameRoomUsers[i].drawnCard = null;
+  }
+  const currDeck = decks.find(dec => dec.room == room);
+  currDeck.deck.reset();
+  currDeck.deck.createDeck();
+  currDeck.deck.discard();
+  startGame();
+}
+
+function killPlayer(player) {
+  player.alive = false;
+  io.to(player.room).emit("gameMessage", `${player.name} died. The card in their hand was ${player.currCard.name}`);
+  player.currCard = null;
+  const gusers = getGameRoomUsers(gameUser.room);
+  io.to(player.room).emit("updateVisuals", gusers);
 }
 
 // Deck class
@@ -319,22 +381,20 @@ class Deck {
 
       }
       else {
-          for(let i = 0; i < 5; i++)
-              this.deckOfCards.push(new Guard());
+          // for(let i = 0; i < 5; i++)
+          //     this.deckOfCards.push(new Guard());
 
+          this.deckOfCards.push(new Priest());
+          this.deckOfCards.push(new Priest());
           this.deckOfCards.push(new Baron());
           this.deckOfCards.push(new Baron());
-          this.deckOfCards.push(new Handmaid());
-          this.deckOfCards.push(new Handmaid());
+          // this.deckOfCards.push(new Handmaid());
+          // this.deckOfCards.push(new Handmaid());
           this.deckOfCards.push(new Prince());
           this.deckOfCards.push(new Prince());
           this.deckOfCards.push(new King());
           this.deckOfCards.push(new Countess());
           this.deckOfCards.push(new Princess());
-          this.deckOfCards.push(new Priest());
-          this.deckOfCards.push(new Priest());
-          this.deckOfCards.push(new Priest());
-          this.deckOfCards.push(new Priest());
       }
   }
 
@@ -352,7 +412,7 @@ class Deck {
   }
 
   shuffleDeck() {
-      //this.deckOfCards = this.deckOfCards.sort((a, b) => 0.5 - Math.random());
+      this.deckOfCards = this.deckOfCards.sort((a, b) => 0.5 - Math.random());
   }
 
   drawCard() {
@@ -376,12 +436,9 @@ class Card {
   
   discard(currPlayer, currCard) {}
 
+
   targetPlayer(currPlayer, card) {
     io.to(currPlayer.id).emit("setTarget", card);
-  }
-
-  getFullDesc() {
-
   }
 }
 
@@ -470,7 +527,7 @@ class Princess extends Card {
   }
 
   discard(currPlayer, currCard) {
-    //TODO
+    killPlayer(currPlayer);
     changeTurn(currPlayer.room);
   }
 }
