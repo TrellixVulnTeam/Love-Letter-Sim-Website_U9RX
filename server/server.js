@@ -156,27 +156,39 @@ io.on('connection', socket => {
 
   //TODO Have to figure out how to differentiate cards, could make global var
   socket.on("targetSet", ({name, targetMSG, cardName}) => {
-    const selectedPlayerIndex = gameUsers.findIndex(user => user.name == targetMSG);
-    const selectedPlayer = gameUsers[selectedPlayerIndex];
-    const currPlayer = gameUsers.find(user=> user.name == name);
+    const selectedPlayer = gameUsers.find(user => user.name == targetMSG);
+    const currPlayer = gameUsers.find(user => user.name == name);
+    if(!selectedPlayer)
+    {
+      io.to(currPlayer.id).emit("gameMessage", `(To you) Player not found. Try again!`);
+      io.to(currPlayer.id).emit("setTarget", cardName);
+    }
+    if(!selectedPlayer.alive)
+    {
+      io.to(currPlayer.id).emit("gameMessage", `(To you) Player not alive. Try again!`);
+      io.to(currPlayer.id).emit("setTarget", cardName);
+    }
     if(cardName == "Guard")
     {
-      //TODO
+      io.to(currPlayer.id).emit("guessNumber", selectedPlayer);
     }
     else if(cardName == "Priest")
     {
       const priestMsg = `(To you) ${selectedPlayer.name} has a ${selectedPlayer.currCard.name}`;
       io.to(gameUsers.find(user => user.name == name).id).emit("gameMessage", priestMsg);
       changeTurn(selectedPlayer.room);
+      io.to(currPlayer.room).emit("gameMessage", `${currPlayer.name} has looked at ${selectedPlayer.name}'s hand.`);
+
     }
     else if(cardName == "Baron")
     {
+      io.to(currPlayer.room).emit("gameMessage", `${currPlayer.name} is battling ${selectedPlayer.name}.`);
       let currPlayerCardNum = 0;
       if(currPlayer.currCard)
         currPlayerCardNum = currPlayer.currCard.num;
       else
         currPlayerCardNum = currPlayer.drawnCard.num;
-      io.to(currPlayer.id).emit("gameMessage", `(to you) ${selectedPlayer.name} has a ${selectedPlayer.currCard.name}`);
+      io.to(currPlayer.id).emit("gameMessage", `(To you) ${selectedPlayer.name} has a ${selectedPlayer.currCard.name}`);
       if(currPlayerCardNum < selectedPlayer.currCard.num)
         killPlayer(currPlayer)
       else if (currPlayerCardNum > selectedPlayer.currCard.num)
@@ -185,12 +197,14 @@ io.on('connection', socket => {
     }
     else if(cardName == "Prince")
     {
+      const currDeck = decks.find(dec => dec.room == room);
+      io.to(currPlayer.room).emit("gameMessage", `${currPlayer.name} is discarding ${selectedPlayer.name}'s hand.`);
       if(selectedPlayer.currCard)
       {
         io.to(currPlayer.room).emit("gameMessage", `${selectedPlayer.name} discarded a ${selectedPlayer.currCard.name}`);
         if (selectedPlayer.currCard.name == "Princess")
           killPlayer(selectedPlayer);
-        selectedPlayer.currCard = null;
+        selectedPlayer.currCard = currDeck.deck.drawCard();
       }
       else
       {
@@ -198,13 +212,37 @@ io.on('connection', socket => {
         if (selectedPlayer.drawnCard.name == "Princess")
           killPlayer(selectedPlayer);
         selectedPlayer.drawnCard = null;
+        selectedPlayer.currCard = currDeck.deck.drawCard();
       }
       changeTurn(selectedPlayer.room);
     }
     else if(cardName == "King")
     {
-      //TODO
+      io.to(currPlayer.room).emit("gameMessage", `${currPlayer.name} has swapped their card with ${selectedPlayer.name}.`)
+      if(currPlayer.currCard)
+      {
+        const temp = currPlayer.currCard;
+        currPlayer.currCard = selectedPlayer.currCard;
+        selectedPlayer.currCard = temp;
+      }
+      else {
+        const temp = currPlayer.drawnCard;
+        currPlayer.currCard = selectedPlayer.currCard;
+        selectedPlayer.currCard = temp;
+        currPlayer.drawnCard = null;
+      }
       changeTurn(selectedPlayer.room);
+    }
+  });
+
+  socket.on("numberGuessed", ({number, selectedPlayerName, name}) => {
+    selectedPlayer = gameUsers.find(user => user.name == selectedPlayerName);
+    io.to(selectedPlayer.room).emit("gameMessage", `${name} guessed that ${selectedPlayer.name} has a card with the number ${number}`)
+    if(number == selectedPlayer.currCard.num) {
+      killPlayer(selectedPlayer);
+    }
+    else {
+      io.to(selectedPlayer.room).emit("gameMessage", `${selectedPlayer.name} did not have this card.`);
     }
   });
 });
@@ -310,8 +348,14 @@ function changeTurn(room) {
   const gameRoomUsers = getGameRoomUsers(room);
   if (currPlayerIndex == gameRoomUsers.length)
     currPlayerIndex = 0;
-  if(!(gameRoomUsers[currPlayerIndex].alive))
+  while(!(gameRoomUsers[currPlayerIndex].alive)) {
     currPlayerIndex++;
+    if (currPlayerIndex == gameRoomUsers.length)
+      currPlayerIndex = 0;
+    if(currPlayerIndex == originalIndex) {
+      endGame(room, gameRoomUsers[currPlayerIndex]);
+    }
+  }
   const currDeck = decks.find(deck => deck.room == room);
   gameRoomUsers[currPlayerIndex].drawnCard = currDeck.deck.drawCard();
   selectedPlayerIndex = null;
@@ -381,15 +425,15 @@ class Deck {
 
       }
       else {
-          // for(let i = 0; i < 5; i++)
-          //     this.deckOfCards.push(new Guard());
+          for(let i = 0; i < 5; i++)
+              this.deckOfCards.push(new Guard());
 
           this.deckOfCards.push(new Priest());
           this.deckOfCards.push(new Priest());
           this.deckOfCards.push(new Baron());
           this.deckOfCards.push(new Baron());
-          // this.deckOfCards.push(new Handmaid());
-          // this.deckOfCards.push(new Handmaid());
+          this.deckOfCards.push(new Handmaid());
+          this.deckOfCards.push(new Handmaid());
           this.deckOfCards.push(new Prince());
           this.deckOfCards.push(new Prince());
           this.deckOfCards.push(new King());
@@ -437,8 +481,8 @@ class Card {
   discard(currPlayer, currCard) {}
 
 
-  targetPlayer(currPlayer, card) {
-    io.to(currPlayer.id).emit("setTarget", card);
+  targetPlayer(currPlayer, cardName) {
+    io.to(currPlayer.id).emit("setTarget", cardName);
   }
 }
 
@@ -449,8 +493,8 @@ class Guard extends Card {
   }
   
   discard(currPlayer, currCard) {
-    this.targetPlayer(currPlayer, currCard);
-        io.to(currPlayer.id).emit("guessNumber");
+    this.targetPlayer(currPlayer, currCard.name);
+    
   }
   
 
@@ -462,7 +506,7 @@ class Priest extends Card {
   }
 
   discard(currPlayer, currCard) {
-    this.targetPlayer(currPlayer, currCard);
+    this.targetPlayer(currPlayer, currCard.name);
   }
 }
 
@@ -473,7 +517,7 @@ class Baron extends Card {
   }
 
   discard(currPlayer, currCard) {
-    this.targetPlayer(currPlayer, currCard);
+    this.targetPlayer(currPlayer, currCard.name);
   }
 }
 
@@ -495,7 +539,7 @@ class Prince extends Card {
   }
 
   discard(currPlayer, currCard) {
-    this.targetPlayer(currPlayer, currCard);
+    this.targetPlayer(currPlayer, currCard.name);
   }
 }
 
@@ -506,7 +550,7 @@ class King extends Card {
   }
 
   discard(currPlayer, currCard) {
-    this.targetPlayer(currPlayer, currCard);
+    this.targetPlayer(currPlayer, currCard.name);
   }
 }
 

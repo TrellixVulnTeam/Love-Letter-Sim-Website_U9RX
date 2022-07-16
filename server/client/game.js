@@ -44,7 +44,6 @@ socket.on("updateVisuals", gusers => {
   updateCards(guser);
   setScores(gusers);
   changeAliveness(guser.alive);
-  console.log(guser);
 });
 
 function setName(name) {
@@ -79,12 +78,12 @@ socket.on("changeCardInDeck", numOfCards => {
   cardsInDeckTeller.innerText =`Cards Remaining in Deck: ${numOfCards}`;
 });
 
-socket.on("setTarget", card => {
-  openTargetInput(card);
+socket.on("setTarget", cardName => {
+  openTargetInput(cardName);
 });
 
-socket.on("guessNumber", () => {
-  openNumGuesser()
+socket.on("guessNumber", (selectedPlayer) => {
+  openNumGuesser(selectedPlayer);
 });
 
 socket.on("gameMessage", msg => {
@@ -138,9 +137,10 @@ function updateCards(player) {
     drawnCardImg.src = "";
 }
 
-function openTargetInput(card) {
+function openTargetInput(cardName) {
   targetArea.style.display = "block";
-  targetText.className = card.name;
+  targetText.className = cardName;
+  console.log(cardName);
 }
 
 document.getElementById("target-button").onclick = function() {
@@ -150,15 +150,24 @@ document.getElementById("target-button").onclick = function() {
   targetArea.style.display = "none";
 } 
 
-function openNumGuesser() {
+function openNumGuesser(selectedPlayer) {
   numGuessArea.style.display = "block";
+  numGuessArea.className = selectedPlayer.name;
 }
 
 document.getElementById("numGuessBtn").onclick = function() {
-  socket.emit("numberGuessed", { // idk if i need to get the current player name
-    number: document.getElementById("numGuessMsg").innerText,
-    currPlayerName: playerName
-  })
+  const number = document.getElementById("numGuessMsg").value;
+  if(number < 2 || number > 8) {
+    outputMessage("(To you) This is not a valid number. Try again!");
+  }
+  else {
+    socket.emit("numberGuessed", {
+      number,
+      selectedPlayerName: numGuessArea.className,
+      name
+    });
+    numGuessArea.style.display = "none";
+  }
 }
 
 function setScores(players) {
