@@ -2,6 +2,7 @@ const path = require('path');
 const http = require('http');
 const express = require('express');
 const socketio = require('socket.io');
+const { isObject } = require('util');
 const admin = "Admin";
 
 const app = express();
@@ -18,7 +19,6 @@ const decks = [];
 let currPlayersInRoom = 0;
 
 let currPlayerIndex = null;
-let selectedPlayerIndex = null;
 let isCurrCard = null;
 
 // Set static folder
@@ -163,12 +163,17 @@ io.on('connection', socket => {
       io.to(currPlayer.id).emit("gameMessage", `(To you) Player not found. Try again!`);
       io.to(currPlayer.id).emit("setTarget", cardName);
     }
-    if(!selectedPlayer.alive)
+    else if(!selectedPlayer.alive)
     {
       io.to(currPlayer.id).emit("gameMessage", `(To you) Player not alive. Try again!`);
       io.to(currPlayer.id).emit("setTarget", cardName);
     }
-    if(cardName == "Guard")
+    else if(selectedPlayer.immune)
+    {
+      io.to(currPlayer.id).emit("gameMessage", `(To you) Player is immune due to Handmaid. Try again!`);
+      io.to(currPlayer.id).emit("setTarget", cardName);
+    }
+    else if(cardName == "Guard")
     {
       io.to(currPlayer.id).emit("guessNumber", selectedPlayer);
     }
@@ -197,7 +202,7 @@ io.on('connection', socket => {
     }
     else if(cardName == "Prince")
     {
-      const currDeck = decks.find(dec => dec.room == room);
+      const currDeck = decks.find(deck => deck.room == selectedPlayer.room);
       io.to(currPlayer.room).emit("gameMessage", `${currPlayer.name} is discarding ${selectedPlayer.name}'s hand.`);
       if(selectedPlayer.currCard)
       {
@@ -244,6 +249,15 @@ io.on('connection', socket => {
     else {
       io.to(selectedPlayer.room).emit("gameMessage", `${selectedPlayer.name} did not have this card.`);
     }
+    changeTurn(selectedPlayer.room);
+  });
+
+  socket.on("showCurrGameUsers", () => {
+    console.log(gameUsers);
+  });
+
+  socket.on("resetTheGame", room =>{
+    resetGame(room);
   });
 });
 
@@ -282,7 +296,8 @@ function userJoinGame(id, name, room) {
   const currCard = currDeck.deck.drawCard();
   const drawnCard = null;
   const alive = true;
-  const user = {id, name, room, points, currCard, drawnCard, alive};
+  const immune = false;
+  const user = {id, name, room, points, currCard, drawnCard, alive, immune};
   gameUsers.push(user);
   return user;
 }
@@ -335,11 +350,15 @@ function findGameUser(name) {
 //TODO
 function startGame(room) {
   const currPlayer = getNextPlayer("", room);
+  if(!currPlayer)
+    return;
   if(!currPlayer.drawnCard)
   {
     const currDeck = decks.find(deck => deck.room == room);
     currPlayer.drawnCard = currDeck.deck.drawCard();
   }
+  io.to(currPlayer.room).emit("notTurn");
+  io.to(currPlayer.id).emit("turn");
 }
 
 function changeTurn(room) {
@@ -356,6 +375,7 @@ function changeTurn(room) {
       endGame(room, gameRoomUsers[currPlayerIndex]);
     }
   }
+  gameRoomUsers[currPlayerIndex].immune = false;
   const currDeck = decks.find(deck => deck.room == room);
   gameRoomUsers[currPlayerIndex].drawnCard = currDeck.deck.drawCard();
   selectedPlayerIndex = null;
@@ -363,11 +383,11 @@ function changeTurn(room) {
   const gusers = getGameRoomUsers(gameUser.room);
   io.to(room).emit("updateVisuals", gusers);
   // What happens when theres no cards left
-  if(currDeck.deck.length == 0) {
+  if(currDeck.deck.deckOfCards.length == 0) {
     let maxPlayer = gameRoomUsers[0];
     let maxNum = gameRoomUsers[0].currCard.num;
     for(let i = 0; i < gameRoomUsers.length; i++) {
-      if(maxNum < gameRoomUsers[i].currCard.num)
+      if(gameRoomUsers[i].currCard && maxNum < gameRoomUsers[i].currCard.num)
       {
         maxNum = gameRoomUsers[i].currCard.num;
         maxPlayer = gameRoomUsers[i];
@@ -379,25 +399,28 @@ function changeTurn(room) {
   if(currPlayerIndex == originalIndex) {
     endGame(room, gameRoomUsers[currPlayerIndex]);
   }
+  io.to(gameRoomUsers[currPlayerIndex].room).emit("notTurn");
+  io.to(gameRoomUsers[currPlayerIndex].id).emit("turn");
 }
 
 function endGame(room, winningPlayer) {
-  winningPlayer.score++;
-  resetGame(room)
+  winningPlayer.points++;
+  console.log("endgame");
+  io.to(room).emit("winRound", winningPlayer.name);
 }
 
 function resetGame(room) {
   const gameRoomUsers = getGameRoomUsers(room);
-  for(let i = 0; i < gameRoomUsers.length; i++) {
-    gameRoomUsers[i].alive = true;
-    gameRoomUsers[i].currCard = null;
-    gameRoomUsers[i].drawnCard = null;
-  }
   const currDeck = decks.find(dec => dec.room == room);
   currDeck.deck.reset();
   currDeck.deck.createDeck();
   currDeck.deck.discard();
-  startGame();
+  for(let i = 0; i < gameRoomUsers.length; i++) {
+    gameRoomUsers[i].alive = true;
+    gameRoomUsers[i].currCard = currDeck.deck.drawCard();
+    gameRoomUsers[i].drawnCard = null;
+  }
+  startGame(room);
 }
 
 function killPlayer(player) {
@@ -528,7 +551,8 @@ class Handmaid extends Card {
   }
 
   discard(currPlayer, currCard) {
-    
+    currPlayer.immune = true;
+    changeTurn(currPlayer.room);
   }
 }
 
