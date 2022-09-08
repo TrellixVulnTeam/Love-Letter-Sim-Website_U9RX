@@ -11,9 +11,14 @@
     <title>Love Letter Game</title>
   </head>
   <body>
+    
     <h1>You are in a game of Love Letter</h1>
     <h2 id="userList"></h2>
     <h3 id="aliveTeller"> You are alive. You may still play this round.</h3>
+    <div id="winner" style="display: none">
+      <h3 id="winnerteller"></h3>
+      <button type="button" id="startNextRound">Start Next Round</button>
+    </div>
     <h3 id="turnteller">It is your turn, your cards:</h3>
     <button type="button" name="currCard" id="currCard" class="imgButton"><img id="currCardImg" class="selectImg" src=""></button>
     <button type="button" name="drawnCard" id="drawnCard" class="imgButton"><img id="drawnCardImg" class="selectImg" src=""></button>
@@ -31,14 +36,16 @@
       <button id="numGuessBtn">Enter</button>
     </div>
     <br>
-    <img src="Guard.jpg" class="guide" id="firstGuide" display="none">
-    <img src="Priest.jpg" class="guide">
-    <img src="Baron.jpg" class="guide">
-    <img src="Handmaid.jpg" class="guide">
-    <img src="Prince.jpg" class="guide">
-    <img src="King.jpg" class="guide">
-    <img src="Countess.jpg" class="guide">
-    <img src="Princess.jpg" class="guide">
+    <div id="guide" style="display: none">
+      <img src="Guard.jpg">
+      <img src="Priest.jpg">
+      <img src="Baron.jpg">
+      <img src="Handmaid.jpg">
+      <img src="Prince.jpg">
+      <img src="King.jpg">
+      <img src="Countess.jpg">
+      <img src="Princess.jpg">
+    </div>
     <div class="chat-container">
       <header class="chat-header">
           <h3 class="chat-title">Play History</h3>

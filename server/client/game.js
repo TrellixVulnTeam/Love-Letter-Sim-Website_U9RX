@@ -21,6 +21,10 @@ const numgGuessText = document.getElementById("numGuessMsg");
 const standings = document.getElementById("standings");
 const turnTeller = document.getElementById("turnteller")
 const aliveTeller = document.getElementById("aliveTeller")
+const guide = document.getElementById("guide");
+
+const winnerTeller = document.getElementById("winnerteller");
+const winner = document.getElementById("winner");
 
 let roundOver = false;
 const {name, room} = Qs.parse(location.search, {
@@ -92,35 +96,26 @@ socket.on("gameMessage", msg => {
 });
 
 socket.on("winRound", (winningPlayerName) => {
-  turnTeller.innerText = `${winningPlayerName} has won the round!`;
-  roundOver = true;
-  console.log("hi");
-  console.log(roundOver);
+  winnerTeller.innerText = `${winningPlayerName} has won the round!`;
+  winner.style.display = "block";
 });
 
 socket.on("turn", () => {
-  if(!roundOver)
     turnTeller.innerText = "It is your turn, your cards:";
 });
 
 socket.on("notTurn", () => {
-  if(!roundOver)
     turnTeller.innerText = "It is not your turn, your card:";
 });
 
 function toggleGuideVisibility() {
-  const cards = document.querySelectorAll(".guide");
-  if(document.getElementById("firstGuide").style.display == "none")
+  if(guide.style.display == "none")
   {
-    cards.forEach(guide =>{
-      guide.style.display = "inline";
-    });
+    guide.style.display = "block";
   }
   else
   {
-    cards.forEach(guide =>{
-      guide.style.display = "none";
-    });
+    guide.style.display = "none";
   }
 }
 

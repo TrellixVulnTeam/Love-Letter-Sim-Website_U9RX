@@ -154,7 +154,7 @@ io.on('connection', socket => {
     io.to(room).emit("updateVisuals", gusers);
   });
 
-  //TODO Have to figure out how to differentiate cards, could make global var
+  //Card Interactions
   socket.on("targetSet", ({name, targetMSG, cardName}) => {
     const selectedPlayer = gameUsers.find(user => user.name == targetMSG);
     const currPlayer = gameUsers.find(user => user.name == name);
